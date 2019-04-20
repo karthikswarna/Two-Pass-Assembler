@@ -380,15 +380,36 @@ char filename2[100] = "output_no_comments1.txt";
     				}
 
     		}
+
+            int f = 0;
+
+            std::string::iterator itt; 
+        
+                for (itt=newLine.begin(); itt!=newLine.end(); itt++){
+                    
+                    
+                            if((int)*itt!=13 && (int)*itt!=32){
+                                
+                                f = 1;
+                            }
+
+                }
+            
+
+            if(f==1){
+                    cout << newLine <<endl;
+                    fout2 << newLine << endl;   
+            
+            }
     		
-    		fout2 << newLine << endl;
+
     	}
     	fin2.close();
     }
 
 
 // Pass-1 of Assembler.
-    cout << "Reading instructions and Converting them to machine codes..." << endl;
+    cout << endl<<"Reading instructions and Converting them to machine codes..." << endl;
 
 
     
