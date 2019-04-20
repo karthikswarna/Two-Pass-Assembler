@@ -283,10 +283,137 @@ int main()
     opcode_table.close();
 //************************************************************************************
 
-// Pass-1 of Assembler.
-    cout << "Reading instructions and Converting them to machine codes..." << endl;
+
+// Removing Multi line Comments.
+
+
+
+cout << endl<<" -------------- "<<endl<<"Reading instructions and Removing Comments ..." <<endl<<" -------------- " <<endl;
     
-    char filename[100] = "input_instructions.txt";
+    char filename1[100] = "input_instructions.txt";
+    
+    ifstream fin1(filename1);
+
+    ofstream fout1;
+    fout1.open("output_no_comments1.txt", ofstream::out | ofstream::trunc);
+
+    string line1;
+
+    int flag2 = 0;
+
+    if(fin1.is_open()){
+
+    	while (getline(fin1, line1)){
+    		int flag = 0;
+    		
+
+    		string newLine = line1;
+
+    		std::string::iterator it; 
+
+    		for (it=newLine.begin(); it!=newLine.end(); it++){
+
+
+    				if(flag2 == 0){
+    					if(*it=='<'){
+    						
+    						*it = ' ';
+    						flag2=1;
+    					}else{
+							continue;
+    					}
+    				}else if(flag2==1){
+
+    					if(*it=='>'){
+
+    						
+    						*it = ' ';
+    						flag2=0;
+    					}else{
+
+    						
+							*it = ' ';
+    					}
+    					
+
+    				}
+
+    		}
+    		fout1 << newLine << endl;
+    	}
+    	fin1.close();
+    }
+
+// Removing Single line comments.
+
+char filename2[100] = "output_no_comments1.txt";
+    //int dataSectionSize = countDataSection(filename);
+    ifstream fin2(filename2);
+
+    ofstream fout2;
+    fout2.open("output_no_final.txt", ofstream::out | ofstream::trunc);
+
+    string line2;
+
+
+    if(fin2.is_open()){
+    	while (getline(fin2, line2)){
+    		int flag = 0;
+    		
+
+    		string newLine = line2;
+
+    		std::string::iterator it; 
+
+    		for (it=newLine.begin(); it!=newLine.end(); it++){
+    				if(flag==0){
+    					if(*it=='#'){
+    						
+    						*it = ' ';
+    						flag=1;
+    					}else{
+							continue;
+    					}
+    				}else if(flag==1){
+    					
+    					*it = ' ';
+    				}
+
+    		}
+
+            int f = 0;
+
+            std::string::iterator itt; 
+        
+                for (itt=newLine.begin(); itt!=newLine.end(); itt++){
+                    
+                    
+                            if((int)*itt!=13 && (int)*itt!=32){
+                                
+                                f = 1;
+                            }
+
+                }
+            
+
+            if(f==1){
+                    cout << newLine <<endl;
+                    fout2 << newLine << endl;   
+            
+            }
+    		
+
+    	}
+    	fin2.close();
+    }
+
+
+// Pass-1 of Assembler.
+    cout << endl<<"Reading instructions and Converting them to machine codes..." << endl;
+
+
+    
+    char filename[100] = "output_no_final.txt";
     //int dataSectionSize = countDataSection(filename);
     ifstream fin(filename);
 
