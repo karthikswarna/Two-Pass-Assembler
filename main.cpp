@@ -39,13 +39,9 @@ typedef struct Symbol               //Symbol Table is made using Linked List to 
 
 int PC = -1;
 int BaseAddress = 0;
-
-int32_t datasection[1000];
-int datasectionindex = 0;
+int ErrorCount = 0;
 
 void tokenize(string const &str, const char delim, vector<std::string> &out);
-int countDataSection(char *filename);
-int immToInt(char *immediate);
 char *addTobin(int input);
 char *shamtTobin(int input);
 char *intTobin(int input);
@@ -126,8 +122,6 @@ class HashTable
             
             if(hash_table[index] == NULL)
             {
-                cout << "Wrong instruction used at line " << PC << ". Assembling Terminated!";
-                flush(cout);
                 return NULL;
             }
             else
@@ -141,8 +135,6 @@ class HashTable
 
                 if(strcmp((*temp).name, op) != 0)
                 {
-                    cout << "Wrong instruction used at line " << PC << ". Assembling Terminated!";
-                    flush(cout);
                     return NULL;
                 }
             }
@@ -175,7 +167,7 @@ class List
                 (*new_node).name[i] = op[i];
             
             (*new_node).name[i] = '\0';
-            (*new_node).address = (PC + 1 + BaseAddress) * 4;
+            (*new_node).address = (PC + BaseAddress) * 4;
             (*new_node).next = NULL;
 
             if(head == NULL)
@@ -234,7 +226,7 @@ class List
         }
 };
 
-int main()
+int main(int argc, char *argv[])
 {
     HashTable OPTAB;                //Opcode table.
     List SYMTAB;                    //Symbol table.
@@ -278,15 +270,15 @@ int main()
         return 0;
     }
 
-    cout << "Hash-table Created Successfully!" << endl;
-    OPTAB.print();
+    //cout << "Hash-table Created Successfully!" << endl;
+    //OPTAB.print();
     opcode_table.close();
 //************************************************************************************
 
 // Removing Multi line Comments.
-    cout << endl << " -------------- " << endl << "Reading instructions and Removing Comments ..." << endl << " --------------" << endl;
+    //cout << "Reading instructions and Removing Comments ..." << endl;
     
-    char filename1[100] = "input_instructions.txt";
+    char *filename1 = argv[1];
     ifstream fin1(filename1);
     ofstream fout1;
     fout1.open("output_no_comments1.txt", ofstream::out | ofstream::trunc);
@@ -385,7 +377,7 @@ int main()
 
             if(f == 1)
             {
-                cout << newLine <<endl;
+                //cout << newLine <<endl;
                 fout2 << newLine << endl;
             }
     	}
@@ -395,22 +387,24 @@ int main()
 //************************************************************************************
 
 // Pass-1 of Assembler.
-    cout << endl << "Reading instructions and Converting them to machine codes..." << endl;
+    //cout << endl << "Reading instructions and Converting them to machine codes..." << endl;
     
     char filename[100] = "output_no_final.txt";
-    //int dataSectionSize = countDataSection(filename);
     ifstream fin(filename);
 
     ofstream fout;
-    fout.open("output_machine_code2.txt", ofstream::out | ofstream::trunc);
-    
-    cout << "Pass-1:" << endl;
+    if(argc == 2)
+        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+    else if(argc == 3)
+        fout.open(argv[2], ofstream::out | ofstream::trunc);
+
+    //cout << "Pass-1:" << endl;
     if (fin.is_open())
     {
         while (getline(fin, line))
         {
             PC++;
-            if(strstr(line.c_str(), ".text") != NULL)                // go to .text section
+            if(strstr(line.c_str(), "START") != NULL)                // go to START section
                 break;
         }
         
@@ -422,7 +416,7 @@ int main()
             flag++;
             if (strstr(line.c_str(), ":") != NULL)                  // if the line contains : then it is label
             {
-                cout << "Label Found!" << endl;
+                //cout << "Label Found!" << endl;
                 copy(line.begin(), line.end(), op);
                 op[line.size() - 1] = '\0';
                 SYMTAB.insert(op, line.size() - 1);
@@ -433,7 +427,7 @@ int main()
 
         if(flag == 0)
         {
-            cout << "Error occured while assembling, \".text\" section missing!" << endl;
+            cout << "Error occured while assembling, \"START\" section missing!" << endl;
             exit(0);
         }
     }
@@ -448,13 +442,13 @@ int main()
     PC = -1;
     fin.open(filename);
 
-    cout << "Pass-2:" << endl;
+    //cout << "Pass-2:" << endl;
     if (fin.is_open())
     {
         while (getline(fin, line))
         {
             PC++;
-            if(strstr(line.c_str(), ".text") != NULL)                // go to .text section
+            if(strstr(line.c_str(), "START") != NULL)                // go to START section
                 break;
         }
 
@@ -470,7 +464,9 @@ int main()
 
             copy(instruction.at(0).begin(), instruction.at(0).end(), op);
             op[instruction.at(0).size()] = '\0';
-            cout << "WORD SCANNED IS " << op << " ";        //check if opcode or label.
+            //cout << "WORD SCANNED IS " << op << " ";        //check if opcode or label.
+            if(strcmp("END", op) == 0)
+                break;
 
             int l = 0;
             while(op[l + 1] != '\0')
@@ -485,7 +481,7 @@ int main()
             }
             else
             {
-                cout << "Inside else" << endl;
+                //cout << "Inside else" << endl;
                 char temp[100];
                 char temp2[100];
                 char temp3[100];
@@ -494,11 +490,14 @@ int main()
                 Opcode* current_node = OPTAB.getOpcodeNode(op);
                 if(current_node == NULL)
                 {
+                    ErrorCount++;
                     fout.close();
-                    fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
-                    fout << "Wrong instruction used at line " << PC + 1 << ". Assembling Terminated!";
-                    fout.close();
-                    exit(0);
+                    if(argc == 2)
+                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                    else if(argc == 3)
+                        fout.open(argv[2], ofstream::out | ofstream::trunc);
+                    cout << "Wrong instruction used at line " << PC + 1 << '.' << endl;
+                    continue;                    
                 }
 
                 fout << "0x" << hex << (PC + BaseAddress) * 4 << " " << (*current_node).code;          //print machine code of the opcode
@@ -515,12 +514,13 @@ int main()
                     fout << " " << getRegisterCode(temp);
                     if(getRegisterCode(temp) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Valid register operand expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Valid register operand expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
                 }
                 else if(strcmp("j", OPTAB.getOpcodeFormat(current_node)) == 0)
@@ -531,13 +531,15 @@ int main()
                     binary = SYMTAB.getAddressCode(temp, 'j');
                     if(binary == "XXX")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Undefined identifier (label)!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Undefined identifier (label)!" << endl;
-                        fout.close();
-                        exit(0);
                     }
+
                     fout << " ";
                     for(count = 0; count < 26; count++)
                     {
@@ -561,12 +563,13 @@ int main()
                     temp4 = atoi(temp3);                                    // temp3 contains offset value.
                     if(temp4 < -32768 || temp4 > 32767)
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
-                        fout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;                        
-                        fout.close();
-                        exit(0);
                     }
 
                     for(it++, i = 0; it != instruction.at(2).end(); it++)  // temp2 contains register.
@@ -580,12 +583,13 @@ int main()
                     fout << " " << getRegisterCode(temp2) << " " << getRegisterCode(temp);
                     if(getRegisterCode(temp) == "111111" || getRegisterCode(temp2) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Two valid register operands expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Two valid register operands expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
 
                     binary = intTobin(temp4);
@@ -603,23 +607,25 @@ int main()
                     temp4 = stoi(instruction.at(2));
                     if(temp4 < -32768 || temp4 > 32767)
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
-                        fout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;                        
-                        fout.close();
-                        exit(0);
                     }
 
                     fout << " " << getRegisterCode(temp);
                     if(getRegisterCode(temp) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". One valid register and immediate operands expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". One valid register and immediate operands expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
 
                     binary = intTobin(temp4);
@@ -643,12 +649,13 @@ int main()
                     fout << " " << getRegisterCode(temp2)  << " " << getRegisterCode(temp3) << " " << getRegisterCode(temp) << " 00000";
                     if(getRegisterCode(temp) == "111111" || getRegisterCode(temp2) == "111111" || getRegisterCode(temp3) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Three valid register operands expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Three valid register operands expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
                 }
                 else if(strcmp("rri", OPTAB.getOpcodeFormat(current_node)) == 0)
@@ -662,23 +669,35 @@ int main()
                     temp4 = stoi(instruction.at(3));
                     if(temp4 < -32768 || temp4 > 32767)
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
-                        fout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;                        
+                    }
+                    if(temp4 == 0 && (strcmp("001010", (*current_node).code) == 0 || strcmp("001011", (*current_node).code) == 0))
+                    {
+                        ErrorCount++;
                         fout.close();
-                        exit(0);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
+                        cout << "Logical error at line " << PC + 1 << ". Trying to divide with 0!" << endl;                        
                     }
 
                     fout << " " << getRegisterCode(temp2)  << " " << getRegisterCode(temp);
                     if(getRegisterCode(temp) == "111111" || getRegisterCode(temp2) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Two valid register and one immediate operands expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Two valid register and one immediate operands expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
 
                     binary = intTobin(temp4);
@@ -701,12 +720,13 @@ int main()
 
                     if(getRegisterCode(temp) == "111111" || getRegisterCode(temp2) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Two valid register and one immediate operands expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Two valid register and one immediate operands expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
                     
                     if(getRegisterCode(temp3) == "111111")
@@ -714,12 +734,13 @@ int main()
                         temp4 = stoi(instruction.at(3));
                         if(temp4 < -32768 || temp4 > 32767)
                         {
+                            ErrorCount++;
                             fout.close();
-                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
-                            fout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;
+                            if(argc == 2)
+                                fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                            else if(argc == 3)
+                                fout.open(argv[2], ofstream::out | ofstream::trunc);
                             cout << "Syntax error at line " << PC + 1 << ". Immediate operand out of range!" << endl;                        
-                            fout.close();
-                            exit(0);
                         }
 
                         fout << " 00000 " << getRegisterCode(temp2) << " " << getRegisterCode(temp);
@@ -749,12 +770,13 @@ int main()
 
                     if(getRegisterCode(temp) == "111111" || getRegisterCode(temp2) == "111111")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Two valid register and one immediate operands expected!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Two valid register and one immediate operands expected!" << endl;
-                        fout.close();
-                        exit(0);
                     }
 
                     fout << " " << getRegisterCode(temp) << " " << getRegisterCode(temp2);
@@ -762,12 +784,13 @@ int main()
                     binary = SYMTAB.getAddressCode(temp3, 'b');
                     if(binary == "XXX")
                     {
+                        ErrorCount++;
                         fout.close();
-                        fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        if(argc == 2)
+                            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+                        else if(argc == 3)
+                            fout.open(argv[2], ofstream::out | ofstream::trunc);
                         cout << "Syntax error at line " << PC + 1 << ". Undefined identifier (label)!" << endl;
-                        fout << "Syntax error at line " << PC + 1 << ". Undefined identifier (label)!" << endl;
-                        fout.close();
-                        exit(0);
                     }
                     fout << " ";
                     for(count = 0; count < 16; count++)
@@ -797,14 +820,32 @@ int main()
     	cout << "Unable to open input file. " << endl << "Assembling Terminated" << endl;
     	return 0;
 	}
+    
+    if(line != "END")
+    {
+        ErrorCount++;
+        fout.close();
+        if(argc == 2)
+            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+        else if(argc == 3)
+            fout.open(argv[2], ofstream::out | ofstream::trunc);
+        cout << "Error occured while assembling at line " << PC + 1 << ". \"END\" lebel missing! Program might not terminate!" << endl;
+    }
 
-    //output_machine_code = fopen("output_machine_code", "w");
-    //fprintf(output_machine_code, "%s\n", intTobin(dataSectionSize*4));
+    if(ErrorCount != 0)
+    {
+        fout.close();
+        if(argc == 2)
+            fout.open("output_machine_code.txt", ofstream::out | ofstream::trunc);
+        else if(argc == 3)
+            fout.open(argv[2], ofstream::out | ofstream::trunc);
+    }
+    fout.close();
 
-    cout << "Symbol Table:" << endl;
+    /*cout << "Symbol Table:" << endl;
     FILE *symbol_table = fopen("symbol_table.txt", "w+");
     SYMTAB.print(symbol_table);
-    fclose(symbol_table);
+    fclose(symbol_table);*/
 
     return 0;
 }
@@ -820,79 +861,7 @@ void tokenize(string const &str, const char delim, vector<std::string> &out)
 		out.push_back(str.substr(start, end - start));
 	}
 }
-
-int countDataSection(char *filename) 
-{
-    int count = 0;
-
-    string line;
-    ifstream fin(filename);
-
-    if (fin.is_open())
-    {
-        // finds the .data section and count the number of .word before .text section appears
-        while (getline(fin, line))
-        {
-            if(strstr(line.c_str(),".data") != NULL)
-            {
-                break;
-            }
-        }
-
-        while (getline(fin, line)) 
-        {
-            if(strstr(line.c_str(),".text") != NULL)
-            {
-                break;
-            }
-            
-            if(strstr(line.c_str(),".word") != NULL)
-            {
-                count++;
-                char * one;
-                char * two;
-                char * three;
-                char temp[100];
-                strcpy(temp, line.c_str());
-
-                if (strstr(temp,":") != NULL) 
-                {
-                    one = strtok(temp,":");
-                    two = strtok(NULL, " \t");
-                    three = strtok(NULL, " \t");
-                    datasection[datasectionindex++] = immToInt(three);
-                } 
-                else 
-                {
-                    one = strtok(temp, " \t");
-                    two = strtok(NULL, " \t");
-                    datasection[datasectionindex++] = immToInt(two);
-                }
-
-            }
-        }
-
-        fin.close();
-    }
-    else 
-        cout << "Unable to open file" << endl;
-
-    return count;
-}
-
-int immToInt(char *immediate)
-{
-    // 2 cases - hexadecimal and decimal.
-    if (strstr(immediate,"0x") != NULL) 
-    {
-        return (int)strtol(immediate, NULL, 0);
-    } 
-    else 
-    {
-        return atoi(immediate);
-    }
-}
-
+   
 char *addTobin(int input)
 {
     string str = bitset<26>(input).to_string();
