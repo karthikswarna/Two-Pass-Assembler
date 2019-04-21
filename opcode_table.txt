@@ -22,4 +22,6 @@ LOAD 100011 xxxxxx rr
 STORE 101011 xxxxxx rr
 BEQ 000100 xxxxxx rrb
 BNE 000101 xxxxxx rrb
+BLE 000110 xxxxxx rrb
 JMP 000010 xxxxxx j
+JAL 000011 xxxxxx j
